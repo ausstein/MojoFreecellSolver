@@ -1,0 +1,254 @@
+@value
+struct FreeCellBoard:
+    var card_positions: SIMD[DType.uint8, 64]   # 52-length array storing card positions but simd has to be power of 2 i.e. 64
+    var top_cards: SIMD[DType.uint8,8]        # Top cards in each column
+    var bottom_cards: SIMD[DType.uint8,8]    # Bottom cards in each column
+    var free_cells: SIMD[DType.uint8,4]       # Free cells (127 means empty)
+    var home_cells: SIMD[DType.uint8,4]       # Home cells, tracks highest card per suit
+    var next_home_cards: SIMD[DType.uint8,4] # Next desired card for each home cell
+
+    # Fixed-size legal move lookup table
+    var column_move_lookup_1: SIMD[DType.uint8,64]
+    var column_move_lookup_2: SIMD[DType.uint8,64]
+
+    fn __init__(inout self):
+        var range_2: UInt8 = 8
+        # Initialize tensors with appropriate sizes
+        self.card_positions = SIMD[DType.uint8, 64]() #Tensor[DType.uint8](TensorShape(52))  # 52 cards
+        self.top_cards = SIMD[DType.uint8, 8]()       # 8 columns
+        self.bottom_cards = SIMD[DType.uint8, 8]()       # 8 columns
+        self.free_cells = SIMD[DType.uint8, 4]()      # 4 free cells
+        self.home_cells = SIMD[DType.uint8, 4]()      # 4 home cells
+        self.next_home_cards = SIMD[DType.uint8, 4]()  # Next expected home cards
+        self.column_move_lookup_1 = SIMD[DType.uint8, 64]()  # Move lookup table for each card
+        self.column_move_lookup_2 = SIMD[DType.uint8, 64]()  # Move lookup table for each card
+        # Initialize values (assuming 127 as "empty" or uninitialized)
+        #var i: UInt8
+        for i in range(4):
+            self.free_cells[i]=127
+            self.home_cells[i]=127
+            self.next_home_cards[i]=i # last two digits are the suit since ace has value 0 the aces are  "0 00000 00" "0 00000 01" "0 00000 10" "0 00000 11" i.E. range(4)
+        
+        for i in range(8):
+            self.top_cards[i]=127
+            if i==4:
+                range_2=7
+            for j in range(range_2):
+                self.card_positions[i*13+j]= i << 5 + j 
+
+        # Generate the lookup table
+        self.generate_column_move_lookup()
+    fn __init__(inout self, card_input: String):
+        """Overloaded initializer with card input."""
+        self.__init__()  # Start with default init
+        self.parse_input(card_input)
+
+    fn parse_input(inout self, card_input: String):
+        """Parse input string of cards and initialize board."""
+        var card_strings: List[String]
+        try:
+            card_strings = card_input.split(" ")
+        except:
+            print("unable to parse input")
+            return
+        for i in range(len(card_strings)):
+            var card_pos : UInt8 = (i%8*16)+i//8
+            var card_index : Int = self.get_card_index(card_strings[i]).__int__()
+            #print(i,i%8,i//8,card_index)
+            if i<8:
+                self.bottom_cards[i]= card_index
+            elif i >= 52:
+                break
+            elif i >= 52-4:
+                self.top_cards[i-52+4] = card_index
+            elif i >= 52-8:
+                self.top_cards[i-52+12] = card_index
+            self.card_positions[card_index] = card_pos
+
+
+    fn generate_column_move_lookup(inout self):
+        """Pregenerate legal column moves for each card."""
+        var value: UInt8
+        var suit: UInt8
+        var color: UInt8
+        var other_value: UInt8
+        var other_suit: UInt8
+        var other_color: UInt8
+        var legal_moves: UInt8
+        for card_index in range(52):
+            value, suit, color = self.get_card_value(card_index)
+            if value==12: #king
+                self.column_move_lookup_1[card_index]=self.get_card_index(13,0,0) #value 13 does not exist, king has no legal collumn move
+                self.column_move_lookup_1[card_index]=self.get_card_index(13,0,0) #value 13 does not exist, king has no legal collumn move
+                continue
+            # Every card has two legal move options (opposite color, one rank higher)
+            legal_moves = 0
+            for other_card_index in range(52):
+                other_value, other_suit, other_color = self.get_card_value(other_card_index)
+                if other_value == value + 1 and other_color != color:
+                    if legal_moves == 0:
+                        self.column_move_lookup_1[card_index] = other_card_index
+                        legal_moves += 1
+                    elif legal_moves == 1:
+                        self.column_move_lookup_2[card_index] = other_card_index
+                        break
+                        
+
+    fn get_legal_moves(inout self) -> (SIMD[DType.uint8, 64], SIMD[DType.uint8, 64], Int):
+        """Generate all legal moves based on current board state."""
+        var legal_moves_card: SIMD[DType.uint8, 64] = SIMD[DType.uint8, 64]()  # Preallocated fixed array
+        var legal_moves_target: SIMD[DType.uint8, 64] = SIMD[DType.uint8, 64]()
+        var move_count: Int = 0
+        
+        # Free Cell Moves: If there is an empty free cell, move all top cards and free cell cards
+        var empty_free_cell: UInt8 = 99
+        for i in range(4):
+            if self.free_cells[i] == 127:
+                empty_free_cell = i
+                break
+        
+        if empty_free_cell != 99:
+            # Move all top cards from columns to the free cell
+            for top_card_i in range(8):
+                if self.top_cards[top_card_i] != 127:
+                    legal_moves_card[move_count] = self.top_cards[top_card_i] 
+                    legal_moves_target[move_count]= 30  # Move to free cell (index 30)
+                    move_count += 1
+                    if move_count >= 63:
+                        return (legal_moves_card,legal_moves_target, move_count)
+
+        # Home Cell Moves
+        var movable_cards= SIMD[DType.uint8, 16]()
+        for i in range(8):
+            movable_cards[i]=self.top_cards[i]
+        for i in range(4):
+            movable_cards[i+8]=self.free_cells[i]
+        var card: UInt8
+        var value:UInt8
+        var suit: UInt8
+        var color: UInt8
+        for card_i in range(12):
+            card=movable_cards[card_i]
+            if card != 127:
+                value, suit, color = self.get_card_value(card)
+                if card == self.next_home_cards[(2*suit+color).__int__()]:
+                    legal_moves_card[move_count] = card
+                    legal_moves_target[move_count] = 31
+                    move_count += 1
+                    if move_count >= 63:
+                        return (legal_moves_card,legal_moves_target, move_count)
+
+        # Column Moves
+        for col_idx in range(8):
+            var top_card = self.top_cards[col_idx]
+
+            # If the column is empty, move any card to this empty column
+            if top_card == 127:  
+                for card_i in range(12):
+                    card=movable_cards[card_i]
+                    if card != 127:
+                        legal_moves_card[move_count] = card
+                        legal_moves_target[move_count] = col_idx << 5
+                        move_count += 1
+                        if move_count >= 63:
+                            return (legal_moves_card,legal_moves_target, move_count)
+                break  # Stop the loop, since all following columns will also be empty
+
+            # Otherwise, check if any other card can be moved onto this top card
+            else:
+                for card_i in range(12):
+                    card=movable_cards[card_i]
+                    if card != 127:
+                        # Check if the top card is a legal move option for the current card
+                        var move_option_1 = self.column_move_lookup_1[card.__int__()]
+                        var move_option_2 = self.column_move_lookup_2[card.__int__()]
+                        
+                        if move_option_1 == top_card or move_option_2 == top_card:  # Valid move to this column
+                            legal_moves_card[move_count] = card
+                            legal_moves_target[move_count] = self.card_positions[top_card.__int__()] + 1
+                            move_count += 1
+                            if move_count >= 63:
+                                return (legal_moves_card,legal_moves_target, move_count)
+
+        return (legal_moves_card,legal_moves_target, move_count)
+
+    fn get_card_value(inout self,card_index: UInt8) -> (UInt8, UInt8, UInt8):
+        """Extract the value, suit, and color from the card index."""
+        var value: UInt8 = (card_index >> 2) & 2**4-1   # Extract 4 bits for value
+        var suit: UInt8 = (card_index >> 1) & 2**1-1  # Extract 1 bit for suit
+        var color: UInt8 = (card_index) & 2**1-1  # Extract 1 bit for color
+        return (value, suit, color)
+    fn get_card_index(inout self, value:UInt8, suit:UInt8,color:UInt8) -> UInt8:
+        var card_index: UInt8 = value*4 +suit*2+color
+        #var value_t: UInt8 = (card_index >> 2) & 2**4-1   # Extract 4 bits for value
+        #var suit_t: UInt8 = (card_index >> 1) & 2**1-1    # Extract 1 bit for suit
+        #var color_t: UInt8 = (card_index) & 2**1-1  # Extract 1 bit for color
+        #print(card_index,value_t,suit_t,color_t)
+        return card_index
+
+
+    fn get_card_index(inout self, card_string:String) -> UInt8:
+        var value: UInt8
+        var suit: UInt8
+        var color: UInt8
+        var value_letter: String = card_string[0]
+        var suit_letter: String = card_string[1]
+        #print(card_string)
+        if value_letter=="A":
+            value=0
+        elif value_letter=="T":
+            value=9
+        elif value_letter=="J":
+            value=10
+        elif value_letter=="Q":
+            value=11
+        elif value_letter=="K":
+            value=12
+        else:
+            try:
+                value=int(value_letter)-1
+            except:
+                value=0
+                print("Warning could not read card value")
+        if suit_letter=="S":
+            suit=0
+            color=0
+        elif suit_letter=="H":
+            suit=0
+            color=1
+        elif suit_letter=="C":
+            suit=1
+            color=0
+        elif suit_letter=="D":
+            suit=1
+            color=1
+        else:
+            suit=0
+            color=0
+            print("Warning could not read suit value")
+        return self.get_card_index(value,suit,color)
+
+
+fn main():
+    var board = FreeCellBoard("7D AH AS TD 6C TC JH AC 2S 4H 2C 3C TH 5H 9C 7H 9H KH 3H AD 9D 8S JD 7C 5C 4D 8C 6D QS 5D KS 7S 9S 8D JC 6H 4S 3S QH 2D TS QD 8H QC 2H 6S JS KC 3D KD 4C 5S")
+    var cards: SIMD[DType.uint8, 64]
+    var targets: SIMD[DType.uint8, 64]
+    var top_cards: SIMD[DType.uint8, 8]
+    var moves_found: Int
+    var value: UInt8
+    var suit: UInt8
+    var color: UInt8
+    cards, targets, moves_found = board.get_legal_moves()
+    top_cards= board.top_cards
+    for i in range (8):
+        value,suit,color=board.get_card_value(top_cards[i])
+        print("card",value,suit,color)
+        value,suit,color=board.get_card_value(board.column_move_lookup_1[top_cards[i].__int__()])
+        print("target",value,suit,color)
+    print(moves_found)
+    for i in range (moves_found):
+        value,suit,color=board.get_card_value(cards[i])
+        print(value,suit,color)
+        print(targets[i])
+    print(board.card_positions)
+    
