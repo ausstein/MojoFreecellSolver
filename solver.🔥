@@ -197,6 +197,9 @@ struct FreeCellBoard:
         var new_bottom_cards = self.bottom_cards
         var sorted = False
         var temp_card:UInt8
+        # Create a mapping from old to new column indices
+        var col_mapping: SIMD[DType.uint8,8]  = SIMD[DType.uint8,8](0,1,2,3,4,5,6,7)
+        var temp_card_i:UInt8
         while not sorted:
             sorted=True
             for i in range(7):
@@ -204,22 +207,20 @@ struct FreeCellBoard:
                     temp_card=new_bottom_cards[i]
                     new_bottom_cards[i]=new_bottom_cards[i+1]
                     new_bottom_cards[i+1]=temp_card
+
+                    temp_card_i=col_mapping[i]
+                    col_mapping[i]=col_mapping[i+1]
+                    col_mapping[i+1]=temp_card_i
+
                     sorted =False
 
-
-            
-        
-        # Create a mapping from old to new column indices
-        var col_mapping = Dict[Int, Int]()
         var new_top_cards = SIMD[DType.uint8, 8]()
         var new_columns = List[List[UInt8]](capacity=8)
         
-        for new_col_idx in range(8):
-            var (_, _, old_col_idx) = column_info[new_col_idx]
-            col_mapping[old_col_idx] = new_col_idx
-            new_top_cards[new_col_idx] = self.top_cards[old_col_idx]
-            new_bottom_cards[new_col_idx] = self.bottom_cards[old_col_idx]
-            new_columns.append([])  # Prepare for card repositioning
+        for i in range(8):
+            new_top_cards[i] = self.top_cards[col_mapping[i].__int__()]
+            
+            
         
         # Step 2: Sort Free Cells based on card indices
         var free_cell_info = List[Tuple[UInt8, UInt8]]()
