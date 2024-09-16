@@ -1,18 +1,19 @@
 @value
 struct FreeCellBoard:
-    var card_positions: SIMD[DType.uint8, 64]   # 52-length array storing card positions but simd has to be power of 2 i.e. 64
+    var card_positions: SIMD[DType.uint8, 64]   # 52-length array storing card positions but simd has to be power of 2 i.e. 64, Main representation used as dict keys
     var top_cards: SIMD[DType.uint8,8]        # Top cards in each column
     var bottom_cards: SIMD[DType.uint8,8]    # Bottom cards in each column
-    var free_cells: SIMD[DType.uint8,4]       # Free cells (127 means empty)
+    var free_cells: SIMD[DType.uint8,4]       # Free cells (63 means empty)
     var home_cells: SIMD[DType.uint8,4]       # Home cells, tracks highest card per suit
     var next_home_cards: SIMD[DType.uint8,4] # Next desired card for each home cell
+    var full_board: SIMD[DType.uint8,256] #dual representation, board representation is bigger but easier to find the new top card etc.
 
     # Fixed-size legal move lookup table
     var column_move_lookup_1: SIMD[DType.uint8,64]
     var column_move_lookup_2: SIMD[DType.uint8,64]
 
     fn __init__(inout self):
-        var range_2: UInt8 = 8
+        var range_2: UInt8 = 7
         # Initialize tensors with appropriate sizes
         self.card_positions = SIMD[DType.uint8, 64]() #Tensor[DType.uint8](TensorShape(52))  # 52 cards
         self.top_cards = SIMD[DType.uint8, 8]()       # 8 columns
@@ -20,21 +21,28 @@ struct FreeCellBoard:
         self.free_cells = SIMD[DType.uint8, 4]()      # 4 free cells
         self.home_cells = SIMD[DType.uint8, 4]()      # 4 home cells
         self.next_home_cards = SIMD[DType.uint8, 4]()  # Next expected home cards
+        self.full_board = SIMD[DType.uint8, 256]()  # Move lookup table for each card
+
         self.column_move_lookup_1 = SIMD[DType.uint8, 64]()  # Move lookup table for each card
         self.column_move_lookup_2 = SIMD[DType.uint8, 64]()  # Move lookup table for each card
-        # Initialize values (assuming 127 as "empty" or uninitialized)
+        
+        # Initialize values (assuming 63 as "empty" or uninitialized)
         #var i: UInt8
         for i in range(4):
-            self.free_cells[i]=127
-            self.home_cells[i]=127
+            self.free_cells[i]=63
+            self.home_cells[i]=63
             self.next_home_cards[i]=i # last two digits are the suit since ace has value 0 the aces are  "0 00000 00" "0 00000 01" "0 00000 10" "0 00000 11" i.E. range(4)
-        
+        var k: Int =0
         for i in range(8):
-            self.top_cards[i]=127
+            
+            self.top_cards[i]=63
             if i==4:
-                range_2=7
+                range_2=6
             for j in range(range_2):
-                self.card_positions[i*13+j]= i << 5 + j 
+                self.card_positions[k]= i*32+j
+                k+=1
+                self.full_board[i*32+j]=k
+            
 
         # Generate the lookup table
         self.generate_column_move_lookup()
@@ -52,7 +60,7 @@ struct FreeCellBoard:
             print("unable to parse input")
             return
         for i in range(len(card_strings)):
-            var card_pos : UInt8 = (i%8*16)+i//8
+            var card_pos : UInt8 = (i%8*32)+i//8  #i%8 is the collumn i//8 is the position
             var card_index : Int = self.get_card_index(card_strings[i]).__int__()
             #print(i,i%8,i//8,card_index)
             if i<8:
@@ -64,6 +72,8 @@ struct FreeCellBoard:
             elif i >= 52-8:
                 self.top_cards[i-52+12] = card_index
             self.card_positions[card_index] = card_pos
+            self.full_board[card_pos.__int__()]=card_index
+
 
 
     fn generate_column_move_lookup(inout self):
@@ -103,14 +113,14 @@ struct FreeCellBoard:
         # Free Cell Moves: If there is an empty free cell, move all top cards and free cell cards
         var empty_free_cell: UInt8 = 99
         for i in range(4):
-            if self.free_cells[i] == 127:
+            if self.free_cells[i] == 63:
                 empty_free_cell = i
                 break
         
         if empty_free_cell != 99:
             # Move all top cards from columns to the free cell
             for top_card_i in range(8):
-                if self.top_cards[top_card_i] != 127:
+                if self.top_cards[top_card_i] != 63:
                     legal_moves_card[move_count] = self.top_cards[top_card_i] 
                     legal_moves_target[move_count]= 30  # Move to free cell (index 30)
                     move_count += 1
@@ -129,7 +139,7 @@ struct FreeCellBoard:
         var color: UInt8
         for card_i in range(12):
             card=movable_cards[card_i]
-            if card != 127:
+            if card != 63:
                 value, suit, color = self.get_card_value(card)
                 if card == self.next_home_cards[(2*suit+color).__int__()]:
                     legal_moves_card[move_count] = card
@@ -143,10 +153,10 @@ struct FreeCellBoard:
             var top_card = self.top_cards[col_idx]
 
             # If the column is empty, move any card to this empty column
-            if top_card == 127:  
+            if top_card == 63:  
                 for card_i in range(12):
                     card=movable_cards[card_i]
-                    if card != 127:
+                    if card != 63:
                         legal_moves_card[move_count] = card
                         legal_moves_target[move_count] = col_idx << 5
                         move_count += 1
@@ -158,7 +168,7 @@ struct FreeCellBoard:
             else:
                 for card_i in range(12):
                     card=movable_cards[card_i]
-                    if card != 127:
+                    if card != 63:
                         # Check if the top card is a legal move option for the current card
                         var move_option_1 = self.column_move_lookup_1[card.__int__()]
                         var move_option_2 = self.column_move_lookup_2[card.__int__()]
@@ -251,4 +261,3 @@ fn main():
         print(value,suit,color)
         print(targets[i])
     print(board.card_positions)
-    
