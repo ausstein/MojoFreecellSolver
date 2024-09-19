@@ -9,7 +9,9 @@ struct FreeCellBoard:
     var home_cells: SIMD[DType.uint8,4]       # Home cells, tracks highest card per suit
     var next_home_cards: SIMD[DType.uint8,4] # Next desired card for each home cell
     var full_board: SIMD[DType.uint8,256] # dual representation, board representation is bigger but easier to find the new top card etc.
-
+    var current_permutation: SIMD[DType.uint8,8]
+    var move_list_card: List[UInt8]
+    var move_list_target: List[UInt8]
     # Fixed-size legal move lookup table
     var column_move_lookup_1: SIMD[DType.uint8,64]
     var column_move_lookup_2: SIMD[DType.uint8,64]
@@ -29,6 +31,9 @@ struct FreeCellBoard:
         self.home_cells = SIMD[DType.uint8, 4]()      # 4 home cells
         self.next_home_cards = SIMD[DType.uint8, 4]()  # Next expected home cards
         self.full_board = SIMD[DType.uint8, 256]()  # Move lookup table for each card
+        self.current_permutation = SIMD[DType.uint8, 8]()
+        self.move_list_card=List[UInt8]()
+        self.move_list_target=List[UInt8]()
 
         self.column_move_lookup_1 = SIMD[DType.uint8, 64]()  # Move lookup table for each card
         self.column_move_lookup_2 = SIMD[DType.uint8, 64]()  # Move lookup table for each card
@@ -47,7 +52,7 @@ struct FreeCellBoard:
         self.full_board=63
 
         for i in range(8):
-            
+            self.current_permutation[i]=i
             
             if i==4:
                 range_2=6
