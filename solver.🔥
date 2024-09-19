@@ -199,99 +199,74 @@ struct FreeCellBoard:
     fn canonicalize_position(inout self):
         """Canonicalize the position by sorting columns and free cells."""
         # Step 1: Sort Columns based on the index of the bottom card
-        var new_bottom_cards = self.bottom_cards
         var sorted = False
-        var temp_card:UInt8
+        var temp_uint:UInt8
+
         # Create a mapping from old to new column indices
         var col_mapping: SIMD[DType.uint8,8]  = SIMD[DType.uint8,8](0,1,2,3,4,5,6,7)
-        var temp_card_i:UInt8
+        
         while not sorted:
             sorted=True
             for i in range(7):
-                if new_bottom_cards[i]>new_bottom_cards[i+1]:
-                    temp_card=new_bottom_cards[i]
-                    new_bottom_cards[i]=new_bottom_cards[i+1]
-                    new_bottom_cards[i+1]=temp_card
+                if self.bottom_cards[i]>self.bottom_cards[i+1]:
+                    temp_uint=self.bottom_cards[i]
+                    self.bottom_cards[i]=self.bottom_cards[i+1]
+                    self.bottom_cards[i+1]=temp_uint
 
-                    temp_card_i=col_mapping[i]
+                    temp_uint=col_mapping[i]
                     col_mapping[i]=col_mapping[i+1]
-                    col_mapping[i+1]=temp_card_i
+                    col_mapping[i+1]=temp_uint
 
+                    temp_uint=self.current_permutation[i]
+                    self.current_permutation[i]=self.current_permutation[i+1]
+                    self.current_permutation[i+1]=temp_uint
                     sorted =False
 
-        var new_top_cards = SIMD[DType.uint8, 8]()
-        var new_columns = List[List[UInt8]](capacity=8)
-        
+        var old_top_cards = self.top_cards
+        var card1:Int
+        var card2:Int
+        var pos1:Int
+        var pos2:Int
         for i in range(8):
-            new_top_cards[i] = self.top_cards[col_mapping[i].__int__()]
+            if not (col_mapping[i]==i):
+                self.top_cards[i] = old_top_cards[col_mapping[i].__int__()]
+                for j in range(32):
+                    pos1=i*32+j
+                    pos2=col_mapping[i].__int__()*32+j
+                    card1=self.full_board[i*32+j].__int__()
+                    card2=self.full_board[pos2].__int__()
+                    if card1==card2: #only possible if both are empty (63), we prevent reaching the free cells and home cells
+                        break
+                    else:
+                        self.full_board[pos1]=card2
+                        self.card_positions[card2]=pos1
+                        self.full_board[pos2]=card1
+                        self.card_positions[card1]=pos2
+
             
             
         
         # Step 2: Sort Free Cells based on card indices
-        var free_cell_info = List[Tuple[UInt8, UInt8]]()
-        for old_free_cell_idx in range(4):
-            var card_index = self.free_cells[old_free_cell_idx]
-            free_cell_info.append((card_index, old_free_cell_idx))
-        
-        free_cell_info.sort(key=lambda x: x[0])
-        var free_cell_mapping = Dict[UInt8, UInt8]()
-        var new_free_cells = SIMD[DType.uint8, 4]()
-        
-        for new_free_cell_idx in range(4):
-            var (card_index, old_free_cell_idx) = free_cell_info[new_free_cell_idx]
-            free_cell_mapping[old_free_cell_idx] = new_free_cell_idx
-            new_free_cells[new_free_cell_idx] = card_index
-        
-        # Update attributes
-        self.top_cards = new_top_cards
-        self.bottom_cards = new_bottom_cards
-        self.free_cells = new_free_cells
-        
-        # Step 3: Update card_positions
-        for card_index in range(52):
-            var pos = self.card_positions[card_index]
-            var old_column_index = pos >> 5
-            var position_in_column = pos & 0b11111
-            
-            if position_in_column < 30:
-                # Card is in a column
-                var new_column_index = col_mapping[old_column_index]
-                var new_pos = (new_column_index << 5) + position_in_column
-                self.card_positions[card_index] = new_pos
-            elif position_in_column == 30:
-                # Card is in a free cell
-                if old_column_index < 4:
-                    var old_free_cell_idx = old_column_index
-                    var new_free_cell_idx = free_cell_mapping[old_free_cell_idx]
-                    var new_pos = (new_free_cell_idx << 5) + position_in_column
-                    self.card_positions[card_index] = new_pos
-            # Home cells and other positions remain unchanged
-        
-        # Step 4: Rebuild full_board
-        self.full_board = 63  # Reset to "no card"
-        for card_index in range(52):
-            var pos = self.card_positions[card_index]
-            self.full_board[pos.__int__()] = card_index
-        
-        # Step 5: Update legal_moves_target
-        for i in range(self.num_legal_moves):
-            var target = self.legal_moves_target[i]
-            var old_column_index = target >> 5
-            var position_in_column = target & 0b11111
-            
-            if position_in_column < 30:
-                # Target is a column position
-                var new_column_index = col_mapping[old_column_index]
-                var new_target = (new_column_index << 5) + position_in_column
-                self.legal_moves_target[i] = new_target
-            elif position_in_column == 30:
-                # Target is a free cell
-                if old_column_index < 4:
-                    var old_free_cell_idx = old_column_index
-                    var new_free_cell_idx = free_cell_mapping[old_free_cell_idx]
-                    var new_target = (new_free_cell_idx << 5) + position_in_column
-                    self.legal_moves_target[i] = new_target
-            # Home cells and other positions remain unchanged       
+        sorted=False
+        while not sorted:
+            sorted=True
+            for i in range(4):
+                if self.free_cells[i]>self.free_cells[i+1]:
+                    pos1=30+(i*32)
+                    pos2=30+((i+1)*32)
+                    card1=self.free_cells[i].__int__()
+                    card2=self.free_cells[i+1].__int__()
+
+                    self.free_cells[i]=card2
+                    self.free_cells[i+1]=card1
+                    self.full_board[pos1]=card2
+                    self.card_positions[card2]=pos1
+                    self.full_board[pos2]=card1
+                    self.card_positions[card1]=pos2
+
+                    sorted =False
+         
+        self.card_positions[63]=0
 
     fn get_card_value(inout self,card_index: UInt8) -> (UInt8, UInt8, UInt8):
         """Extract the value, suit, and color from the card index."""
@@ -372,4 +347,6 @@ fn main():
         print(value,suit,color)
         print(board.legal_moves_target[i])
     print(board.card_positions)
+    print(board.full_board)
+    board.canonicalize_position()
     print(board.full_board)
