@@ -340,7 +340,7 @@ struct FreeCellBoard:
             ##@parameter
             for i in range(3):
                 if self.free_cells[i]>self.free_cells[i+1]:
-                    temp_uint=self.current_permutation[i]
+                    temp_uint=self.current_free_cell_permutation[i]
                     self.current_free_cell_permutation[i]=self.current_free_cell_permutation[i+1]
                     self.current_free_cell_permutation[i+1]=temp_uint
                     sorted =False
@@ -397,9 +397,11 @@ struct FreeCellBoard:
         else:
             origin_collumn=self.current_free_cell_permutation[origin_collumn.__int__()]
         if target_position!= 31 and target_position!=30:
-            target_collumn=self.current_permutation[origin_collumn.__int__()]
+            target_collumn=self.current_permutation[target_collumn.__int__()]
         elif target_position ==30:
-            target_collumn=self.current_free_cell_permutation[origin_collumn.__int__()]
+            print(target_collumn)
+            target_collumn=self.current_free_cell_permutation[target_collumn.__int__()]
+            print(target_collumn)
         self.move_list_origin.append(origin_collumn*32+origin_position)
         self.move_list_target.append(target_collumn*32+target_position)
         self.canonicalize_position()
@@ -411,14 +413,20 @@ struct FreeCellBoard:
 
         origin_collumn,origin_position=self.get_collumn_position(origin)
         target_collumn,target_position=self.get_collumn_position(target)
+        print(self.current_free_cell_permutation)
+        print(self.inverse_free_cell_permutation)
         if target_position!=30:
-            target_collumn=self.inverse_permutation[origin_collumn.__int__()]
+            target_collumn=self.inverse_permutation[target_collumn.__int__()]
         else:
-            target_position= self.inverse_free_cell_permutation[origin_collumn.__int__()]
+            target_collumn= self.inverse_free_cell_permutation[target_collumn.__int__()]
         if origin_position!= 30 and origin_position !=31:
+            
             origin_collumn=self.inverse_permutation[origin_collumn.__int__()]
+            
         elif origin_position==30:
+            print(origin_collumn)
             origin_collumn=self.inverse_free_cell_permutation[origin_collumn.__int__()]
+            print(origin_collumn)
         else:
             self.solved=False
             
@@ -427,9 +435,9 @@ struct FreeCellBoard:
         target = target_collumn*32+target_position
         card = self.full_board[origin.__int__()]
 
-        self.card_positions[card.__int__()]=origin
-        self.full_board[origin.__int__()]=card
-        self.full_board[target.__int__()]=63
+        self.card_positions[card.__int__()]=target
+        self.full_board[target.__int__()]=card
+        self.full_board[origin.__int__()]=63
 
         if target_position!=30:
             self.top_cards[target_collumn.__int__()]=card
@@ -536,9 +544,9 @@ def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth
     
     #print(position.card_positions)
     if position.card_positions.__str__() in visited:
-        return True
+        return False
     else:   
-        print(len(visited),flush=True)
+        print(len(visited),depth,flush=True)
         visited[position.card_positions.__str__()]=True
 
     #print("hi4",flush=True)
@@ -556,7 +564,10 @@ def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth
         col2,val2=position.get_collumn_position(position.legal_moves_target[i])
         #print(position.top_cards)
         #print(position.legal_moves_origin[i],position.legal_moves_target[i])
+        var test = position.card_positions.__str__()
+        var move = position.legal_moves_origin[i].__str__()+"to"+position.legal_moves_target[i].__str__()
         position.make_move(position.legal_moves_origin[i], position.legal_moves_target[i])
+        var test2 = position.card_positions.__str__()
         #print(position.top_cards)
         #print("hi5")
         # Recursive call
@@ -565,7 +576,16 @@ def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth
             return True
         #print("hi6")
         # Unmake the move
+        
         position.unmake_last_move()
+
+        if test != position.card_positions.__str__():
+            print("!!!!!ERRORR!!!!!")
+            print(move)
+            print(test)
+            print(test2)
+            print(position.card_positions.__str__())
+            return True
     #print("position cannot be solved")
     
     return False
