@@ -1,13 +1,13 @@
-from collections import List, Set
+from collections import List, Set, Dict
 
-@value
+
 struct FreeCellBoard:
     var card_positions: SIMD[DType.uint8, 64]   # 52-length array storing card positions but simd has to be power of 2 i.e. 64, Main representation used as dict keys
     var top_cards: SIMD[DType.uint8,8]        # Top cards in each column
     var bottom_cards: SIMD[DType.uint8,8]    # Bottom cards in each column
     var free_cells: SIMD[DType.uint8,4]       # Free cells (63 means empty)
     var next_home_cards: SIMD[DType.uint8,4] # Next desired card for each home cell
-    alias next_home_cards_solved: SIMD[DType.uint8,4] = SIMD[DType.uint8,4](52,53,54,55)
+    var next_home_cards_solved: SIMD[DType.uint8,4] 
     var full_board: SIMD[DType.uint8,256] # dual representation, board representation is bigger but easier to find the new top card etc.
     var current_permutation: SIMD[DType.uint8,8]
     var inverse_permutation: SIMD[DType.uint8,8]
@@ -34,6 +34,7 @@ struct FreeCellBoard:
         self.bottom_cards = SIMD[DType.uint8, 8]()       # 8 columns
         self.free_cells = SIMD[DType.uint8, 4]()      # 4 free cells
         self.next_home_cards = SIMD[DType.uint8, 4]()  # Next expected home cards
+        self.next_home_cards_solved = SIMD[DType.uint8,4](52,53,54,55)
         self.full_board = SIMD[DType.uint8, 256]()  # Move lookup table for each card
         self.current_permutation = SIMD[DType.uint8, 8]()
         self.inverse_permutation = SIMD[DType.uint8, 8]()
@@ -90,6 +91,57 @@ struct FreeCellBoard:
         self.canonicalize_position()
         self.generate_all_legal_moves()
 
+    fn __copyinit__(inout self, existing: Self):
+        self.card_positions = existing.card_positions  # 52-length array storing card positions but simd has to be power of 2 i.e. 64, Main representation used as dict keys
+        self.top_cards = existing.top_cards       # Top cards in each column
+        self.bottom_cards= existing. bottom_cards   # Bottom cards in each column
+        self.free_cells= existing.free_cells       # Free cells (63 means empty)
+        self.next_home_cards= existing.next_home_cards # Next desired card for each home cell
+        self.next_home_cards_solved= existing.next_home_cards_solved
+        self.full_board= existing.full_board # dual representation, board representation is bigger but easier to find the new top card etc.
+        self.current_permutation= existing.current_permutation
+        self.inverse_permutation= existing.inverse_permutation
+        
+        self.current_free_cell_permutation= existing.current_free_cell_permutation
+        self.inverse_free_cell_permutation= existing.inverse_free_cell_permutation
+        self.move_list_origin= existing.move_list_origin
+        self.move_list_target= existing.move_list_target
+        # Fixed-size legal move lookup table
+        self.column_move_lookup_1= existing.column_move_lookup_1
+        self.column_move_lookup_2= existing.column_move_lookup_2
+
+        self.legal_moves_origin= existing.legal_moves_origin
+        self.legal_moves_target= existing.legal_moves_target
+        self.num_legal_moves= existing.num_legal_moves
+        self.num_cells_occupied= existing.num_cells_occupied
+        self.solved= existing.solved
+
+    fn __moveinit__(inout self, owned existing: Self):
+        self.card_positions = existing.card_positions  # 52-length array storing card positions but simd has to be power of 2 i.e. 64, Main representation used as dict keys
+        self.top_cards = existing.top_cards       # Top cards in each column
+        self.bottom_cards= existing. bottom_cards   # Bottom cards in each column
+        self.free_cells= existing.free_cells       # Free cells (63 means empty)
+        self.next_home_cards= existing.next_home_cards # Next desired card for each home cell
+        self.next_home_cards_solved= existing.next_home_cards_solved
+        self.full_board= existing.full_board # dual representation, board representation is bigger but easier to find the new top card etc.
+        self.current_permutation= existing.current_permutation
+        self.inverse_permutation= existing.inverse_permutation
+        
+        self.current_free_cell_permutation= existing.current_free_cell_permutation
+        self.inverse_free_cell_permutation= existing.inverse_free_cell_permutation
+        self.move_list_origin= existing.move_list_origin^ 
+        self.move_list_target= existing.move_list_target^ 
+        # Fixed-size legal move lookup table
+        self.column_move_lookup_1= existing.column_move_lookup_1
+        self.column_move_lookup_2= existing.column_move_lookup_2
+
+        self.legal_moves_origin= existing.legal_moves_origin
+        self.legal_moves_target= existing.legal_moves_target
+        self.num_legal_moves= existing.num_legal_moves
+        self.num_cells_occupied= existing.num_cells_occupied
+        self.solved= existing.solved
+
+
     fn parse_input(inout self, card_input: String):
         """Parse input string of cards and initialize board."""
         var card_strings: List[String]
@@ -125,7 +177,7 @@ struct FreeCellBoard:
         var other_suit: UInt8
         var other_color: UInt8
         var legal_moves: UInt8
-        @parameter
+        #@parameter
         for card_index in range(52):
             value, suit, color = self.get_card_value(card_index)
             if value==12: #king
@@ -134,7 +186,7 @@ struct FreeCellBoard:
                 continue
             # Every card has two legal move options (opposite color, one rank higher)
             legal_moves = 0
-            @parameter
+            #@parameter
             for other_card_index in range(52):
                 other_value, other_suit, other_color = self.get_card_value(other_card_index)
                 if other_value == value + 1 and other_color != color:
@@ -154,33 +206,35 @@ struct FreeCellBoard:
         
         # Free Cell Moves: If there is an empty free cell, move all top cards and free cell cards
         self.num_cells_occupied=4
-        @parameter
+        #@parameter
         for i in range(4):
             if self.free_cells[i] == 63:
                 self.num_cells_occupied = i
                 break
         if self.num_cells_occupied != 4:
             # Move all top cards from columns to the free cell
-            @parameter
+            #@parameter
             for top_card_i in range(8):
                 if self.top_cards[top_card_i] != 63:
                     self.legal_moves_origin[move_count] = self.card_positions[self.top_cards[top_card_i].__int__()]
+                    col2,val2=self.get_collumn_position(self.legal_moves_origin[move_count])
+                    #print(self.top_cards[top_card_i].__int__(),self.card_positions[self.top_cards[top_card_i].__int__()])
                     self.legal_moves_target[move_count]= 30+(self.num_cells_occupied*32)  # Move to free cell (index 30) and collumn 0-3 representing each cell
                     move_count += 1
 
         # Home Cell Moves
         var movable_cards= SIMD[DType.uint8, 16]()
-        @parameter
+        #@parameter
         for i in range(8):
             movable_cards[i]=self.top_cards[i]
-        @parameter
+        #@parameter
         for i in range(4):
             movable_cards[i+8]=self.free_cells[i]
         var card: UInt8
         var value:UInt8
         var suit: UInt8
         var color: UInt8
-        @parameter
+        #@parameter
         for card_i in range(12):
             card=movable_cards[card_i]
             if card != 63:
@@ -191,13 +245,13 @@ struct FreeCellBoard:
                     move_count += 1
 
         # Column Moves
-        @parameter
+        #@parameter
         for col_idx in range(8):
             var top_card = self.top_cards[col_idx]
 
             # If the column is empty, move any card to this empty column
             if top_card == 63:  
-                @parameter
+                #@parameter
                 for card_i in range(12):
                     card=movable_cards[card_i]
                     if card != 63:
@@ -208,7 +262,7 @@ struct FreeCellBoard:
 
             # Otherwise, check if any other card can be moved onto this top card
             else:
-                @parameter
+                #@parameter
                 for card_i in range(12):
                     card=movable_cards[card_i]
                     if card != 63:
@@ -222,6 +276,9 @@ struct FreeCellBoard:
                             move_count += 1
         self.num_legal_moves=move_count
     fn canonicalize_position(inout self):
+        #print(self.top_cards)
+        #print(self.bottom_cards)
+        #print(self.full_board[self.top_cards[0].__int__()])
         """Canonicalize the position by sorting columns and free cells."""
         # Step 1: Sort Columns based on the index of the bottom card
         var sorted = False
@@ -232,7 +289,7 @@ struct FreeCellBoard:
         
         while not sorted:
             sorted=True
-            @parameter
+            #@parameter
             for i in range(7):
                 if self.bottom_cards[i]>self.bottom_cards[i+1]:
                     temp_uint=self.bottom_cards[i]
@@ -253,24 +310,25 @@ struct FreeCellBoard:
         var card2:Int
         var pos1:Int
         var pos2:Int
-        @parameter
+        #@parameter
         for i in range(8):
             self.inverse_permutation[self.current_permutation[i].__int__()]=i
             if not (col_mapping[i]==i):
                 self.top_cards[i] = old_top_cards[col_mapping[i].__int__()]
-                @parameter
-                for j in range(32):
-                    pos1=i*32+j
-                    pos2=col_mapping[i].__int__()*32+j
-                    card1=self.full_board[i*32+j].__int__()
-                    card2=self.full_board[pos2].__int__()
-                    if card1==card2: #only possible if both are empty (63), we prevent reaching the free cells and home cells
-                        break
-                    else:
-                        self.full_board[pos1]=card2
-                        self.card_positions[card2]=pos1
-                        self.full_board[pos2]=card1
-                        self.card_positions[card1]=pos2
+                #@parameter
+                if not (col_mapping[i]<i): #avoid double swap
+                    for j in range(32):
+                        pos1=i*32+j
+                        pos2=col_mapping[i].__int__()*32+j
+                        card1=self.full_board[i*32+j].__int__()
+                        card2=self.full_board[pos2].__int__()
+                        if card1==card2: #only possible if both are empty (63), we prevent reaching the free cells and home cells
+                            break
+                        else:
+                            self.full_board[pos1]=card2
+                            self.full_board[pos2]=card1
+                            self.card_positions[card2]=pos1
+                            self.card_positions[card1]=pos2
 
             
             
@@ -279,8 +337,8 @@ struct FreeCellBoard:
         sorted=False
         while not sorted:
             sorted=True
-            @parameter
-            for i in range(4):
+            ##@parameter
+            for i in range(3):
                 if self.free_cells[i]>self.free_cells[i+1]:
                     temp_uint=self.current_permutation[i]
                     self.current_free_cell_permutation[i]=self.current_free_cell_permutation[i+1]
@@ -300,10 +358,14 @@ struct FreeCellBoard:
                     self.card_positions[card1]=pos2
 
                     sorted =False
-        @parameter
+        #@parameter
         for i in range(4):
             self.inverse_free_cell_permutation[self.current_free_cell_permutation[i].__int__()]=i
         self.card_positions[63]=0
+
+        #print(self.top_cards)
+        #print(self.bottom_cards)
+        ##print(self.full_board[self.top_cards[0].__int__()])
     
     fn make_move(inout self,origin: UInt8, target:UInt8):
         origin_collumn,origin_position=self.get_collumn_position(origin)
@@ -469,16 +531,17 @@ struct SIMDKey[T: DType, N: Int](KeyElement):
         # Perform element-wise comparison and then check if all elements are equal
         return not all(self.value == other.value)
 
-fn solve(inout position: FreeCellBoard, inout visited: Set[SIMDKey[DType.uint8, 64]]) -> Bool:
+def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth=0) -> Bool:
     # Convert card_positions to a tuple for hashing
-    print(len(visited),flush=True)
     
-    if SIMDKey(position.card_positions) in visited:
-        
-        return False
-    else:
-        
-        visited.add(SIMDKey(position.card_positions))
+    #print(position.card_positions)
+    if position.card_positions.__str__() in visited:
+        return True
+    else:   
+        print(len(visited),flush=True)
+        visited[position.card_positions.__str__()]=True
+
+    #print("hi4",flush=True)
 
     if position.solved:
         print("Solution found!")
@@ -489,21 +552,30 @@ fn solve(inout position: FreeCellBoard, inout visited: Set[SIMDKey[DType.uint8, 
 
     for i in range(position.num_legal_moves):
         # Make the move
+        col,val=position.get_collumn_position(position.legal_moves_origin[i])
+        col2,val2=position.get_collumn_position(position.legal_moves_target[i])
+        #print(position.top_cards)
+        #print(position.legal_moves_origin[i],position.legal_moves_target[i])
         position.make_move(position.legal_moves_origin[i], position.legal_moves_target[i])
-        
+        #print(position.top_cards)
+        #print("hi5")
         # Recursive call
-        if solve(position, visited):
-            return True
         
+        if solve(position, visited,depth=depth+1):
+            return True
+        #print("hi6")
         # Unmake the move
         position.unmake_last_move()
-    print("position cannot be solved")
+    #print("position cannot be solved")
     
     return False
 
-fn main():
+def main():
+    print("hi1",flush=True)
     var board = FreeCellBoard("7D AH AS TD 6C TC JH AC 2S 4H 2C 3C TH 5H 9C 7H 9H KH 3H AD 9D 8S JD 7C 5C 4D 8C 6D QS 5D KS 7S 9S 8D JC 6H 4S 3S QH 2D TS QD 8H QC 2H 6S JS KC 3D KD 4C 5S")
-    var hashtable = Set[SIMDKey[DType.uint8, 64]]()
+    print("hi2",flush=True)
+    var hashtable = Dict[String,Bool]()
+    print("hi3")
     solved= solve(board,hashtable)
 
     print(solved)
