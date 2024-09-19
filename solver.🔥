@@ -69,11 +69,15 @@ struct FreeCellBoard:
 
         # Generate the lookup table
         self.generate_column_move_lookup()
+        self.canonicalize_position()
+        self.generate_all_legal_moves()
 
     fn __init__(inout self, card_input: String):
         """Overloaded initializer with card input."""
         self.__init__()  # Start with default init
         self.parse_input(card_input)
+        self.canonicalize_position()
+        self.generate_all_legal_moves()
 
     fn parse_input(inout self, card_input: String):
         """Parse input string of cards and initialize board."""
@@ -97,6 +101,7 @@ struct FreeCellBoard:
                 self.top_cards[i-52+12] = card_index
             self.card_positions[card_index] = card_pos
             self.full_board[card_pos.__int__()]=card_index
+
 
 
 
