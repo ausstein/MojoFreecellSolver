@@ -348,5 +348,26 @@ fn main():
         print(board.legal_moves_target[i])
     print(board.card_positions)
     print(board.full_board)
+
+    for i in range (8):
+        value,suit,color=board.get_card_value(board.bottom_cards[i])
+        print("card",value,suit,color)
+    print(board.current_permutation)
     board.canonicalize_position()
-    print(board.full_board)
+    print(board.bottom_cards)
+    for i in range (8):
+        value,suit,color=board.get_card_value(board.bottom_cards[i])
+        print("canon",value,suit,color)
+    print(board.current_permutation)
+    for i in range (board.num_legal_moves):
+        value,suit,color=board.get_card_value(board.legal_moves_card[i])
+        print(value,suit,color)
+        print(board.legal_moves_target[i])
+    board.generate_all_legal_moves()
+    for i in range (board.num_legal_moves):
+        value,suit,color=board.get_card_value(board.legal_moves_card[i])
+        print(value,suit,color)
+        print(board.legal_moves_target[i])
+    
+    
+
