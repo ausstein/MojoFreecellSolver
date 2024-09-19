@@ -217,6 +217,8 @@ struct FreeCellBoard:
             for top_card_i in range(8):
                 if self.top_cards[top_card_i] != 63:
                     self.legal_moves_origin[move_count] = self.card_positions[self.top_cards[top_card_i].__int__()]
+                    #print("card",self.top_cards[top_card_i])
+                    #print("origin",self.legal_moves_origin[move_count])
                     #col2,val2=self.get_collumn_position(self.legal_moves_origin[move_count])
                     #print(self.top_cards[top_card_i].__int__(),self.card_positions[self.top_cards[top_card_i].__int__()])
                     self.legal_moves_target[move_count]= 30+(self.num_cells_occupied*32)  # Move to free cell (index 30) and collumn 0-3 representing each cell
@@ -246,8 +248,10 @@ struct FreeCellBoard:
 
         # Column Moves
         #@parameter
+        #print(self.top_cards)
         for col_idx in range(8):
             var top_card = self.top_cards[col_idx]
+            
 
             # If the column is empty, move any card to this empty column
             if top_card == 63:  
@@ -274,6 +278,7 @@ struct FreeCellBoard:
                             self.legal_moves_origin[move_count] = self.card_positions[card.__int__()]
                             self.legal_moves_target[move_count] = self.card_positions[top_card.__int__()] + 1
                             move_count += 1
+        #print(move_count, self.legal_moves_origin)
         self.num_legal_moves=move_count
     fn canonicalize_position(inout self):
         #print(self.top_cards)
@@ -400,30 +405,30 @@ struct FreeCellBoard:
         if target_position!= 31 and target_position!=30:
             target_collumn=self.current_permutation[target_collumn.__int__()]
         elif target_position ==30:
-            print(target_collumn)
+            #print(target_collumn)
             target_collumn=self.current_free_cell_permutation[target_collumn.__int__()]
-            print(target_collumn)
+            #print(target_collumn)
         self.move_list_origin.append(origin_collumn*32+origin_position)
         self.move_list_target.append(target_collumn*32+target_position)
         for i in range(52):
             if not i == self.full_board[self.card_positions[i].__int__()].__int__():
                 print(i)
-                print(self.card_positions)
-                print(self.full_board)
+                print(self.card_positions[i])
+                print(self.full_board[self.card_positions[i].__int__()])
                 return False
         self.canonicalize_position()
         for i in range(52):
             if not i == self.full_board[self.card_positions[i].__int__()].__int__():
                 print(i)
-                print(self.card_positions)
-                print(self.full_board)
+                print(self.card_positions[i])
+                print(self.full_board[self.card_positions[i].__int__()])
                 return False
         self.generate_all_legal_moves()
         for i in range(52):
             if not i == self.full_board[self.card_positions[i].__int__()].__int__():
                 print(i)
-                print(self.card_positions)
-                print(self.full_board)
+                print(self.card_positions[i])
+                print(self.full_board[self.card_positions[i].__int__()])
                 return False
         return True
 
@@ -433,7 +438,7 @@ struct FreeCellBoard:
 
         origin_collumn,origin_position=self.get_collumn_position(origin)
         target_collumn,target_position=self.get_collumn_position(target)
-        print(self.current_permutation)
+        #print(self.current_permutation)
         if target_position!=30:
             target_collumn=self.inverse_permutation[target_collumn.__int__()]
         else:
@@ -443,9 +448,9 @@ struct FreeCellBoard:
             origin_collumn=self.inverse_permutation[origin_collumn.__int__()]
             
         elif origin_position==30:
-            print(origin_collumn)
+            #print(origin_collumn)
             origin_collumn=self.inverse_free_cell_permutation[origin_collumn.__int__()]
-            print(origin_collumn)
+            #print(origin_collumn)
         else:
             self.solved=False
             
@@ -480,22 +485,22 @@ struct FreeCellBoard:
         for i in range(52):
             if not i == self.full_board[self.card_positions[i].__int__()].__int__():
                 print(i)
-                print(self.card_positions)
-                print(self.full_board)
+                print(self.card_positions[i])
+                print(self.full_board[self.card_positions[i].__int__()])
                 return False
         self.canonicalize_position()
         for i in range(52):
             if not i == self.full_board[self.card_positions[i].__int__()].__int__():
                 print(i)
-                print(self.card_positions)
-                print(self.full_board)
+                print(self.card_positions[i])
+                print(self.full_board[self.card_positions[i].__int__()])
                 return False
         self.generate_all_legal_moves()
         for i in range(52):
             if not i == self.full_board[self.card_positions[i].__int__()].__int__():
                 print(i)
-                print(self.card_positions)
-                print(self.full_board)
+                print(self.card_positions[i])
+                print(self.full_board[self.card_positions[i].__int__()])
                 return False
         return True
 
@@ -524,7 +529,7 @@ struct FreeCellBoard:
         var color: UInt8
         var value_letter: String = card_string[0]
         var suit_letter: String = card_string[1]
-        #print(card_string)
+        print(card_string)
         if value_letter=="A":
             value=0
         elif value_letter=="T":
@@ -597,47 +602,51 @@ def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth
 
     for i in range(position.num_legal_moves):
         # Make the move
-        col,val=position.get_collumn_position(position.legal_moves_origin[i])
-        col2,val2=position.get_collumn_position(position.legal_moves_target[i])
+        #col,val=position.get_collumn_position(position.legal_moves_origin[i])
+        #col2,val2=position.get_collumn_position(position.legal_moves_target[i])
         #print(position.top_cards)
         #print(position.legal_moves_origin[i],position.legal_moves_target[i])
         var test = position.card_positions.__str__()
         var move = position.legal_moves_origin[i].__str__()+"to"+position.legal_moves_target[i].__str__()
-        print(position.bottom_cards)
+        #print(move)
+        if position.legal_moves_origin[i] ==29:
+            continue
+        if position.full_board[position.legal_moves_origin[i].__int__()]==63:
+            print("!!!!!ERRORR63!!!!!")
+            print(position.card_positions[63])
+            print(position.full_board[3])
+            print(move)
+            print(test)
+            print(position.card_positions.__str__())
+            return True
         var sucess= position.make_move(position.legal_moves_origin[i], position.legal_moves_target[i])
-        print("SUCESS",sucess)
+        #print("SUCESS",sucess)
         if not sucess:
             print("!!!!!ERRORRMOVE!!!!!")
             print(move)
             print(test)
             print(position.card_positions.__str__())
             return True
-        print(position.bottom_cards)
+        #print(position.bottom_cards)
         var test2 = position.card_positions.__str__()
         #print(position.top_cards)
         #print("hi5")
         # Recursive call
-        if position.full_board[position.legal_moves_origin[i].__int__()]==63:
-            print("!!!!!ERRORR63!!!!!")
-            print(move)
-            print(test)
-            print(test2)
-            print(position.card_positions.__str__())
-            return True
+        
         if solve(position, visited,depth=depth+1):
             return True
         #print("hi6")
         # Unmake the move
         
         sucess= position.unmake_last_move()
-        print("SUCESS",sucess)
+        #print("SUCESS",sucess)
         if not sucess:
             print("!!!!!ERRORRMOVEUNMAKE!!!!!")
             print(move)
             print(test)
             print(position.card_positions.__str__())
             return True
-        print(position.bottom_cards)
+        #print(position.bottom_cards)
         if test != position.card_positions.__str__():
             print("!!!!!ERRORR!!!!!")
             print(move)
