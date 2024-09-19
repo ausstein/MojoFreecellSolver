@@ -1,4 +1,4 @@
-from collections import List
+from collections import List, Set
 
 @value
 struct FreeCellBoard:
@@ -7,6 +7,7 @@ struct FreeCellBoard:
     var bottom_cards: SIMD[DType.uint8,8]    # Bottom cards in each column
     var free_cells: SIMD[DType.uint8,4]       # Free cells (63 means empty)
     var next_home_cards: SIMD[DType.uint8,4] # Next desired card for each home cell
+    alias next_home_cards_solved: SIMD[DType.uint8,4] = SIMD[DType.uint8,4](52,53,54,55)
     var full_board: SIMD[DType.uint8,256] # dual representation, board representation is bigger but easier to find the new top card etc.
     var current_permutation: SIMD[DType.uint8,8]
     var inverse_permutation: SIMD[DType.uint8,8]
@@ -23,6 +24,7 @@ struct FreeCellBoard:
     var legal_moves_target: SIMD[DType.uint8,64]
     var num_legal_moves: Int
     var num_cells_occupied: Int
+    var solved: Bool
 
     fn __init__(inout self):
         var range_2: UInt8 = 7
@@ -48,6 +50,7 @@ struct FreeCellBoard:
         self.legal_moves_target = SIMD[DType.uint8, 64]()  # legal move target positions
         self.num_legal_moves = 0
         self.num_cells_occupied = 0
+        self.solved = False
 
         # Initialize values (defining 63 as "empty")
         #var i: UInt8
@@ -316,6 +319,7 @@ struct FreeCellBoard:
             self.num_cells_occupied+=1
         else:
             self.next_home_cards[target_collumn.__int__()]=card+4 #this is card with same suit but +1 value
+            self.solved = all(self.next_home_cards==self.next_home_cards_solved)
         if target_position==0:
             self.bottom_cards[target_collumn.__int__()]=card
         if origin_position==0:
@@ -353,6 +357,8 @@ struct FreeCellBoard:
             origin_collumn=self.inverse_permutation[origin_collumn.__int__()]
         elif origin_position==30:
             origin_collumn=self.inverse_free_cell_permutation[origin_collumn.__int__()]
+        else:
+            self.solved=False
             
         
         origin = origin_collumn*32+origin_position
@@ -446,16 +452,61 @@ struct FreeCellBoard:
             print("Warning could not read suit value")
         return self.get_card_index(value,suit,color)
 
+@value
+struct SIMDKey[T: DType, N: Int](KeyElement):
+    var value: SIMD[T, N]
+
+    fn __init__(inout self, value: SIMD[T, N]):
+        self.value = value
+
+    fn __hash__(self) -> UInt:
+        return self.value.__hash__()
+
+    fn __eq__(self, other: SIMDKey[T, N]) -> Bool:
+        # Perform element-wise comparison and then check if all elements are equal
+        return all(self.value == other.value)
+    fn __ne__(self, other: SIMDKey[T, N]) -> Bool:
+        # Perform element-wise comparison and then check if all elements are equal
+        return not all(self.value == other.value)
+
+fn solve(inout position: FreeCellBoard, inout visited: Set[SIMDKey[DType.uint8, 64]]) -> Bool:
+    # Convert card_positions to a tuple for hashing
+    print(len(visited),flush=True)
+    
+    if SIMDKey(position.card_positions) in visited:
+        
+        return False
+    else:
+        
+        visited.add(SIMDKey(position.card_positions))
+
+    if position.solved:
+        print("Solution found!")
+        for i in range(len(position.move_list_origin)):
+            print("Move origins:", position.move_list_origin[i])
+            print("Move targets:", position.move_list_target[i])
+        return True
+
+    for i in range(position.num_legal_moves):
+        # Make the move
+        position.make_move(position.legal_moves_origin[i], position.legal_moves_target[i])
+        
+        # Recursive call
+        if solve(position, visited):
+            return True
+        
+        # Unmake the move
+        position.unmake_last_move()
+    print("position cannot be solved")
+    
+    return False
 
 fn main():
     var board = FreeCellBoard("7D AH AS TD 6C TC JH AC 2S 4H 2C 3C TH 5H 9C 7H 9H KH 3H AD 9D 8S JD 7C 5C 4D 8C 6D QS 5D KS 7S 9S 8D JC 6H 4S 3S QH 2D TS QD 8H QC 2H 6S JS KC 3D KD 4C 5S")
-    var cards: SIMD[DType.uint8, 64]
-    var targets: SIMD[DType.uint8, 64]
-    var top_cards: SIMD[DType.uint8, 8]
-    var moves_found: Int
-    var value: UInt8
-    var suit: UInt8
-    var color: UInt8
+    var hashtable = Set[SIMDKey[DType.uint8, 64]]()
+    solved= solve(board,hashtable)
+
+    print(solved)
 
     
     
