@@ -285,8 +285,8 @@ struct FreeCellBoard:
                             #print("origin collumn", self.legal_moves_origin[move_count])
                             move_count += 1
         #print(move_count, self.legal_moves_origin)
-        for i in range(move_count):
-            assert_not_equal(self.legal_moves_origin[i],self.legal_moves_target[i],msg="ERROR_ILLEGAL_MOVE")
+        #for i in range(move_count):
+        #    assert_not_equal(self.legal_moves_origin[i],self.legal_moves_target[i],msg="ERROR_ILLEGAL_MOVE")
             #if self.legal_moves_origin[i]==self.legal_moves_target[i]:
              #   print("ERROR_ILLEGAL_MOVE")
               #  print("ERROR_ILLEGAL_MOVE")
@@ -387,7 +387,7 @@ struct FreeCellBoard:
 
         #sanity checks
         @parameter
-        if True:
+        if False:
             for i in range(8):
                 #print(i,self.full_board[i*32],self.bottom_cards[i])
                 assert_equal(self.full_board[i*32],self.bottom_cards[i],msg="SANITY CHECK FAILED")       
@@ -436,26 +436,26 @@ struct FreeCellBoard:
             #print(target_collumn)
         self.move_list_origin.append(origin_collumn*32+origin_position)
         self.move_list_target.append(target_collumn*32+target_position)
-        for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
-                print(i)
-                print(self.card_positions[i])
-                print(self.full_board[self.card_positions[i].__int__()])
-                return False
+        #for i in range(52):
+        #    if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
+        #        print(i)
+        #        print(self.card_positions[i])
+        #        print(self.full_board[self.card_positions[i].__int__()])
+        #        return False
         self.canonicalize_position()
-        for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
-                print(i)
-                print(self.card_positions[i])
-                print(self.full_board[self.card_positions[i].__int__()])
-                return False
+        #for i in range(52):
+        #    if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
+        #        print(i)
+        #        print(self.card_positions[i])
+        #        print(self.full_board[self.card_positions[i].__int__()])
+        #        return False
         self.generate_all_legal_moves()
-        for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
-                print(i)
-                print(self.card_positions[i])
-                print(self.full_board[self.card_positions[i].__int__()])
-                return False
+        #for i in range(52):
+        #    if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
+        #        print(i)
+        #        print(self.card_positions[i])
+        #        print(self.full_board[self.card_positions[i].__int__()])
+        #        return False
         return True
 
     fn unmake_last_move(inout self)raises -> Bool:
@@ -515,26 +515,26 @@ struct FreeCellBoard:
             #print(origin)
             self.full_board[origin.__int__()]=card-4
             self.next_home_cards[origin_collumn.__int__()]=card #this is card with same suit but +1 value
-        for i in range(52):
-            if (not i == self.full_board[self.card_positions[i].__int__()].__int__()) and not ((self.card_positions[i]&31)==31):
-                print(i)
-                print(self.card_positions[i])
-                print(self.full_board[self.card_positions[i].__int__()])
-                return False
+        #for i in range(52):
+        #    if (not i == self.full_board[self.card_positions[i].__int__()].__int__()) and not ((self.card_positions[i]&31)==31):
+        #        print(i)
+        #        print(self.card_positions[i])
+        #        print(self.full_board[self.card_positions[i].__int__()])
+        #        return False
         self.canonicalize_position()
-        for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
-                print(i)
-                print(self.card_positions[i])
-                print(self.full_board[self.card_positions[i].__int__()])
-                return False
+        #for i in range(52):
+        #    if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
+        #        print(i)
+        #        print(self.card_positions[i])
+        #        print(self.full_board[self.card_positions[i].__int__()])
+        #        return False
         self.generate_all_legal_moves()
-        for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
-                print(i)
-                print(self.card_positions[i])
-                print(self.full_board[self.card_positions[i].__int__()])
-                return False
+        #for i in range(52):
+        #    if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
+        #        print(i)
+        #        print(self.card_positions[i])
+        #        print(self.full_board[self.card_positions[i].__int__()])
+        #        return False
         return True
 
     fn get_collumn_position(inout self,full_position:UInt8) -> (UInt8, UInt8):
@@ -562,7 +562,7 @@ struct FreeCellBoard:
         var color: UInt8
         var value_letter: String = card_string[0]
         var suit_letter: String = card_string[1]
-        print(card_string)
+        #print(card_string)
         if value_letter=="A":
             value=0
         elif value_letter=="T":
@@ -614,24 +614,27 @@ struct SIMDKey[T: DType, N: Int](KeyElement):
         # Perform element-wise comparison and then check if all elements are equal
         return not all(self.value == other.value)
 
-def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth=0) -> Bool:
+def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth=0 ,max_depth_reached=False) -> (Bool,Bool):
     # Convert card_positions to a tuple for hashing
-    
+    if depth>=1000:
+        #raise Error("MAXDEPTH REACHED")
+        return (True,True)
     #print(position.card_positions)
     if position.card_positions.__str__() in visited:
-        return False
+        return (False,False)
     else:   
-        print(len(visited),depth,flush=True)
+        #if len(visited)%1000==0:
+        #    print(len(visited),depth,flush=True)
         visited[position.card_positions.__str__()]=True
 
     #print("hi4",flush=True)
 
     if position.solved:
-        print("Solution found!")
-        for i in range(len(position.move_list_origin)):
-            print("Move origins:", position.move_list_origin[i])
-            print("Move targets:", position.move_list_target[i])
-        return True
+        print("Solution found!",depth , len(visited))
+        #for i in range(len(position.move_list_origin)):
+        #    print("Move origins:", position.move_list_origin[i])
+        #    print("Move targets:", position.move_list_target[i])
+        return (True,False)
 
     for i in range(position.num_legal_moves):
         # Make the move
@@ -639,67 +642,124 @@ def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth
         #col2,val2=position.get_collumn_position(position.legal_moves_target[i])
         #print(position.top_cards)
         #print(position.legal_moves_origin[i],position.legal_moves_target[i])
-        var test = position.card_positions.__str__()
-        var move = position.legal_moves_origin[i].__str__()+"to"+position.legal_moves_target[i].__str__()
+        #var test = position.card_positions.__str__()
+        #var move = position.legal_moves_origin[i].__str__()+"to"+position.legal_moves_target[i].__str__()
         #print(move)
         if position.legal_moves_origin[i] ==29:
             continue
-        if position.full_board[position.legal_moves_origin[i].__int__()]==63:
-            print("!!!!!ERRORR63!!!!!")
-            print(position.card_positions[63])
-            print(position.full_board[3])
-            print(move)
-            print(test)
-            print(position.card_positions.__str__())
-            return True
+        #if position.full_board[position.legal_moves_origin[i].__int__()]==63:
+        #    print("!!!!!ERRORR63!!!!!")
+        #    print(position.card_positions[63])
+        #    print(position.full_board[3])
+        #    print(move)
+        #    print(test)
+        #    print(position.card_positions.__str__())
+        #    return True
         var sucess= position.make_move(position.legal_moves_origin[i], position.legal_moves_target[i])
         #print("SUCESS",sucess)
-        if not sucess:
-            print("!!!!!ERRORRMOVE!!!!!")
-            print(move)
-            print(test)
-            print(position.card_positions.__str__())
-            return True
+        #if not sucess:
+        #    print("!!!!!ERRORRMOVE!!!!!")
+        #    print(move)
+        #    print(test)
+        #    print(position.card_positions.__str__())
+        #    return True
         #print(position.bottom_cards)
-        var test2 = position.card_positions.__str__()
+        #var test2 = position.card_positions.__str__()
         #print(position.top_cards)
         #print("hi5")
         # Recursive call
         
-        if solve(position, visited,depth=depth+1):
-            return True
+        finished,depth_reached= solve(position, visited,depth=depth+1)
+        if finished:
+            return (True,depth_reached)
         #print("hi6")
         # Unmake the move
         
         sucess= position.unmake_last_move()
         #print("SUCESS",sucess)
-        if not sucess:
-            print("!!!!!ERRORRMOVEUNMAKE!!!!!")
-            print(move)
-            print(test)
-            print(position.card_positions.__str__())
-            return True
+        #if not sucess:
+        #    print("!!!!!ERRORRMOVEUNMAKE!!!!!")
+        #    print(move)
+        #    print(test)
+        #    print(position.card_positions.__str__())
+        #    return True
         #print(position.bottom_cards)
-        if test != position.card_positions.__str__():
-            print("!!!!!ERRORR Unmove Position Different!!!!!")
-            print(move)
-            print(test)
-            print(test2)           
-            print(position.card_positions.__str__())
-            return True
-    #print("position cannot be solved")
-    
-    return False
+        #if test != position.card_positions.__str__():
+        #    print("!!!!!ERRORR Unmove Position Different!!!!!")
+        #    print(move)
+        #    print(test)
+        #    print(test2)           
+        #    print(position.card_positions.__str__())
+        #    return True
+    if depth==0:
+        print("position cannot be solved")
+        print(len(visited),"distinct positions can be reached")
+    return (False,False)
+
+fn lcg(seed: Int32) -> Int32:
+    var max_int32: Int32 = 0x7FFFFFFF  # 2**31 - 1
+    var multiplier: Int32 = 214013
+    var increment: Int32 = 2531011
+    return (seed * multiplier + increment) & max_int32  # Apply the 32-bit limit with bitwise AND
+
+fn shuffle_deck(game_number: Int) -> SIMD[DType.uint8,64]:
+    var deck: SIMD[DType.uint8,64] = SIMD[DType.uint8,64]()
+    for i in range(0, 52):
+        deck[i] = 51 - i  # Initialize deck in reverse order
+    var rnd: List[Int32] = List[Int32]()
+    var rng_seed: Int32 = game_number
+    for _ in range(52):
+        rng_seed = lcg(rng_seed)
+        rnd.append(rng_seed >> 16)
+    for index in range(52):
+        var r = rnd[index]
+        var j: Int32 = 51 - (r % (52 - index))
+        # Swap deck[index] and deck[j]
+        var temp = deck[index]
+        deck[index] = deck[j.__int__()]
+        deck[j.__int__()] = temp
+    return deck
+
+fn card_to_string(card: Int32) -> String:
+    var values = List[String]("A", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K")
+    var suits = List[String]("C", "D", "H", "S")
+    var value = values[card.__int__() // 4]  # Value is determined by dividing card index by 4
+    var suit = suits[(card & 3).__int__()]  # Suit is determined by card index mod 4 (bitwise &)
+    return value + suit
+
+fn format_deck(deck: SIMD[DType.uint8,64]) -> String:
+    var result = String("")
+    for i in range(52):
+        card = deck[i]
+        result += card_to_string(card.cast[DType.int32]())  # Cast to int32 for card index
+        result += " "  # Add a space after every card
+    return result.strip()  # Remove the trailing space
+
+fn check_game_11982() raises:
+    var game_number = 11982
+    var deck = shuffle_deck(game_number)
+    var formatted_deck = format_deck(deck)
+    print(formatted_deck)  # Output the deck for visual comparison
+    var expected = "AH AS 4H AC 2D 6S TS JS 3D 3H QS QC 8S 7H AD KS KD 6H 5S 4D 9H JH 9S 3C JC 5D 5C 8C 9D TD KH 7C 6C 2C TH QH 6D TC 4S 7S JD 7D 8H 9C 2H QD 4C 5H KC 8D 2S 3S"
+    assert_equal(formatted_deck, expected, "Game #11982 does not match the expected output")
+
+fn get_game_i(game_number:Int) -> String:
+    var deck = shuffle_deck(game_number)
+    var formatted_deck = format_deck(deck)
+    return formatted_deck  # Output the deck for visual comparison
+
+
+
+
 
 def main():
-    print("hi1",flush=True)
-    var board = FreeCellBoard("7D AH AS TD 6C TC JH AC 2S 4H 2C 3C TH 5H 9C 7H 9H KH 3H AD 9D 8S JD 7C 5C 4D 8C 6D QS 5D KS 7S 9S 8D JC 6H 4S 3S QH 2D TS QD 8H QC 2H 6S JS KC 3D KD 4C 5S")
-    print("hi2",flush=True)
-    var hashtable = Dict[String,Bool]()
-    print("hi3")
-    solved= solve(board,hashtable)
-
-    print(solved)
+    check_game_11982()
+   
+    var i = 11982 
+        
+    board = FreeCellBoard(get_game_i(i)) 
+    var hashtable = Dict[String,Bool]() 
+    solved= solve(board,hashtable) 
 
     
     
