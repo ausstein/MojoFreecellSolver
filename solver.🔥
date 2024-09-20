@@ -390,8 +390,9 @@ struct FreeCellBoard:
         if True:
             for i in range(8):
                 #print(i,self.full_board[i*32],self.bottom_cards[i])
-                assert_equal(self.full_board[i*32],self.bottom_cards[i],msg="SANITY CHECK FAILED")               
-                assert_equal(self.card_positions[self.bottom_cards[i].__int__()], i*32,msg="SANITY CHECK FAILED")
+                assert_equal(self.full_board[i*32],self.bottom_cards[i],msg="SANITY CHECK FAILED")       
+                if self.bottom_cards[i]!=63:                    
+                    assert_equal(self.card_positions[self.bottom_cards[i].__int__()], i*32,msg="SANITY CHECK FAILED")
 
         #print(self.top_cards)
         #print(self.bottom_cards)
@@ -477,7 +478,7 @@ struct FreeCellBoard:
             origin_collumn=self.inverse_free_cell_permutation[origin_collumn.__int__()]
             #print(origin_collumn)
         else:
-            print(origin,target,origin_position,target_position,origin_collumn,target_collumn)
+            #print(origin,target,origin_position,target_position,origin_collumn,target_collumn)
             self.solved=False
             
         
@@ -487,9 +488,9 @@ struct FreeCellBoard:
         target_collumn,target_position=self.get_collumn_position(target)
 
         var card: UInt8 = self.full_board[origin.__int__()]
-        if origin_position==31:
-            print(target)
-            print(card)
+        #if origin_position==31:
+            #print(target)
+            #print(card)
         self.card_positions[card.__int__()]=target
         self.full_board[target.__int__()]=card
         self.full_board[origin.__int__()]=63
@@ -511,7 +512,7 @@ struct FreeCellBoard:
             self.free_cells[origin_collumn.__int__()]=63
             self.num_cells_occupied-=1
         else:
-            print(origin)
+            #print(origin)
             self.full_board[origin.__int__()]=card-4
             self.next_home_cards[origin_collumn.__int__()]=card #this is card with same suit but +1 value
         for i in range(52):
