@@ -756,7 +756,7 @@ def main():
     #check_game_11982()
     unsolvable = List[Int]()
     for i in range (1,32001):    
-        print(i, "unsolvable:", len(unsolvable))   
+        print(i, " found ", len(unsolvable), " unsolvaple position[s]")   
         board = FreeCellBoard(get_game_i(i)) 
         var hashtable = Dict[String,Bool]() 
         solved= solve(board,hashtable) 
