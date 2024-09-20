@@ -1,5 +1,5 @@
 from collections import List, Set, Dict
-
+from testing import assert_true, assert_equal, assert_not_equal
 
 struct FreeCellBoard:
     var card_positions: SIMD[DType.uint8, 64]   # 52-length array storing card positions but simd has to be power of 2 i.e. 64, Main representation used as dict keys
@@ -26,7 +26,7 @@ struct FreeCellBoard:
     var num_cells_occupied: Int
     var solved: Bool
 
-    fn __init__(inout self):
+    fn __init__(inout self)raises:
         var range_2: UInt8 = 7
         # Initialize tensors with appropriate sizes
         self.card_positions = SIMD[DType.uint8, 64]() #Tensor[DType.uint8](TensorShape(52))  # 52 cards
@@ -71,12 +71,13 @@ struct FreeCellBoard:
             for j in range(range_2):
                 
                 self.card_positions[k]= i*32+j
-                k+=1
+                
                 self.full_board[i*32+j]=k
                 if j==0:
-                    self.bottom_cards[i]=i*32+j
+                    self.bottom_cards[i]=k
                 if j==range_2.__int__()-1:
-                    self.top_cards[i]=i*32+j
+                    self.top_cards[i]=k
+                k+=1
             
 
         # Generate the lookup table
@@ -84,7 +85,7 @@ struct FreeCellBoard:
         self.canonicalize_position()
         self.generate_all_legal_moves()
 
-    fn __init__(inout self, card_input: String):
+    fn __init__(inout self, card_input: String)raises:
         """Overloaded initializer with card input."""
         self.__init__()  # Start with default init
         self.parse_input(card_input)
@@ -198,8 +199,9 @@ struct FreeCellBoard:
                         break
                         
 
-    fn generate_all_legal_moves(inout self):
+    fn generate_all_legal_moves(inout self) raises:
         """Generate all legal moves based on current board state."""
+        #print(self.card_positions)
         var move_count: Int=0
         self.legal_moves_origin=29 # placeholderposition only first movecount moves will be legal movesall other are 29
         self.legal_moves_target=29
@@ -222,6 +224,7 @@ struct FreeCellBoard:
                     #col2,val2=self.get_collumn_position(self.legal_moves_origin[move_count])
                     #print(self.top_cards[top_card_i].__int__(),self.card_positions[self.top_cards[top_card_i].__int__()])
                     self.legal_moves_target[move_count]= 30+(self.num_cells_occupied*32)  # Move to free cell (index 30) and collumn 0-3 representing each cell
+                    #print("origin Free-Cell", self.legal_moves_origin[move_count])
                     move_count += 1
 
         # Home Cell Moves
@@ -244,6 +247,7 @@ struct FreeCellBoard:
                 if card == self.next_home_cards[(2*suit+color).__int__()]:
                     self.legal_moves_origin[move_count] = self.card_positions[card.__int__()]
                     self.legal_moves_target[move_count] = 31+color*32+suit*64# Move to home cell (index 31) and collumn 0-3 representing color
+                    #print("origin Home", self.legal_moves_origin[move_count])
                     move_count += 1
 
         # Column Moves
@@ -261,6 +265,7 @@ struct FreeCellBoard:
                     if card != 63:
                         self.legal_moves_origin[move_count] = self.card_positions[card.__int__()]
                         self.legal_moves_target[move_count] = col_idx << 5
+                        #print("origin collumn empty", self.legal_moves_origin[move_count])
                         move_count += 1
                 break  # Stop the loop, since all following columns will also be empty
 
@@ -277,10 +282,17 @@ struct FreeCellBoard:
                         if move_option_1 == top_card or move_option_2 == top_card:  # Valid move to this column
                             self.legal_moves_origin[move_count] = self.card_positions[card.__int__()]
                             self.legal_moves_target[move_count] = self.card_positions[top_card.__int__()] + 1
+                            #print("origin collumn", self.legal_moves_origin[move_count])
                             move_count += 1
         #print(move_count, self.legal_moves_origin)
+        for i in range(move_count):
+            assert_not_equal(self.legal_moves_origin[i],self.legal_moves_target[i],msg="ERROR_ILLEGAL_MOVE")
+            #if self.legal_moves_origin[i]==self.legal_moves_target[i]:
+             #   print("ERROR_ILLEGAL_MOVE")
+              #  print("ERROR_ILLEGAL_MOVE")
         self.num_legal_moves=move_count
-    fn canonicalize_position(inout self):
+        #print(self.card_positions)
+    fn canonicalize_position(inout self) raises:
         #print(self.top_cards)
         #print(self.bottom_cards)
         #print(self.full_board[self.top_cards[0].__int__()])
@@ -311,7 +323,8 @@ struct FreeCellBoard:
                     sorted =False
 
         var old_top_cards = self.top_cards
-        var card1:Int
+        var old_full_board = self.full_board
+        var card1:Int #UInt8#
         var card2:Int
         var pos1:Int
         var pos2:Int
@@ -321,7 +334,11 @@ struct FreeCellBoard:
             if not (col_mapping[i]==i):
                 self.top_cards[i] = old_top_cards[col_mapping[i].__int__()]
                 #@parameter
-                if not (col_mapping[i]<i): #avoid double swap
+                for j in range(19): #7 original cards imagine king is top card initialy then max 12 other cards can be added A-Q
+                    card1=old_full_board[col_mapping[i].__int__()*32+j].__int__()
+                    self.full_board[i*32+j]=card1
+                    self.card_positions[card1]=i*32+j
+                """if not (col_mapping[i]<i): #avoid double swap
                     for j in range(32):
                         pos1=i*32+j
                         pos2=col_mapping[i].__int__()*32+j
@@ -333,7 +350,7 @@ struct FreeCellBoard:
                             self.full_board[pos1]=card2
                             self.full_board[pos2]=card1
                             self.card_positions[card2]=pos1
-                            self.card_positions[card1]=pos2
+                            self.card_positions[card1]=pos2"""
 
             
             
@@ -368,11 +385,19 @@ struct FreeCellBoard:
             self.inverse_free_cell_permutation[self.current_free_cell_permutation[i].__int__()]=i
         self.card_positions[63]=0
 
+        #sanity checks
+        @parameter
+        if True:
+            for i in range(8):
+                #print(i,self.full_board[i*32],self.bottom_cards[i])
+                assert_equal(self.full_board[i*32],self.bottom_cards[i],msg="SANITY CHECK FAILED")               
+                assert_equal(self.card_positions[self.bottom_cards[i].__int__()], i*32,msg="SANITY CHECK FAILED")
+
         #print(self.top_cards)
         #print(self.bottom_cards)
         ##print(self.full_board[self.top_cards[0].__int__()])
     
-    fn make_move(inout self,origin: UInt8, target:UInt8) -> Bool:
+    fn make_move(inout self,origin: UInt8, target:UInt8)raises -> Bool:
         origin_collumn,origin_position=self.get_collumn_position(origin)
         target_collumn,target_position=self.get_collumn_position(target)
         card = self.full_board[origin.__int__()]
@@ -411,28 +436,28 @@ struct FreeCellBoard:
         self.move_list_origin.append(origin_collumn*32+origin_position)
         self.move_list_target.append(target_collumn*32+target_position)
         for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__():
+            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
                 print(i)
                 print(self.card_positions[i])
                 print(self.full_board[self.card_positions[i].__int__()])
                 return False
         self.canonicalize_position()
         for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__():
+            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
                 print(i)
                 print(self.card_positions[i])
                 print(self.full_board[self.card_positions[i].__int__()])
                 return False
         self.generate_all_legal_moves()
         for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__():
+            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
                 print(i)
                 print(self.card_positions[i])
                 print(self.full_board[self.card_positions[i].__int__()])
                 return False
         return True
 
-    fn unmake_last_move(inout self) -> Bool:
+    fn unmake_last_move(inout self)raises -> Bool:
         target = self.move_list_origin.pop()
         origin = self.move_list_target.pop()  #since we undo origin becomes target of the undo
 
@@ -452,13 +477,19 @@ struct FreeCellBoard:
             origin_collumn=self.inverse_free_cell_permutation[origin_collumn.__int__()]
             #print(origin_collumn)
         else:
+            print(origin,target,origin_position,target_position,origin_collumn,target_collumn)
             self.solved=False
             
         
         origin = origin_collumn*32+origin_position
         target = target_collumn*32+target_position
-        card = self.full_board[origin.__int__()]
+        origin_collumn,origin_position=self.get_collumn_position(origin)
+        target_collumn,target_position=self.get_collumn_position(target)
 
+        var card: UInt8 = self.full_board[origin.__int__()]
+        if origin_position==31:
+            print(target)
+            print(card)
         self.card_positions[card.__int__()]=target
         self.full_board[target.__int__()]=card
         self.full_board[origin.__int__()]=63
@@ -480,24 +511,25 @@ struct FreeCellBoard:
             self.free_cells[origin_collumn.__int__()]=63
             self.num_cells_occupied-=1
         else:
-            self.full_board[target.__int__()]=card-4
-            self.next_home_cards[target_collumn.__int__()]=card #this is card with same suit but +1 value
+            print(origin)
+            self.full_board[origin.__int__()]=card-4
+            self.next_home_cards[origin_collumn.__int__()]=card #this is card with same suit but +1 value
         for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__():
+            if (not i == self.full_board[self.card_positions[i].__int__()].__int__()) and not ((self.card_positions[i]&31)==31):
                 print(i)
                 print(self.card_positions[i])
                 print(self.full_board[self.card_positions[i].__int__()])
                 return False
         self.canonicalize_position()
         for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__():
+            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
                 print(i)
                 print(self.card_positions[i])
                 print(self.full_board[self.card_positions[i].__int__()])
                 return False
         self.generate_all_legal_moves()
         for i in range(52):
-            if not i == self.full_board[self.card_positions[i].__int__()].__int__():
+            if not i == self.full_board[self.card_positions[i].__int__()].__int__() and not ((self.card_positions[i]&31)==31):
                 print(i)
                 print(self.card_positions[i])
                 print(self.full_board[self.card_positions[i].__int__()])
@@ -648,10 +680,10 @@ def solve(inout position: FreeCellBoard, inout visited: Dict[String,Bool], depth
             return True
         #print(position.bottom_cards)
         if test != position.card_positions.__str__():
-            print("!!!!!ERRORR!!!!!")
+            print("!!!!!ERRORR Unmove Position Different!!!!!")
             print(move)
             print(test)
-            print(test2)
+            print(test2)           
             print(position.card_positions.__str__())
             return True
     #print("position cannot be solved")
