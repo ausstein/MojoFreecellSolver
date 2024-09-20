@@ -753,14 +753,17 @@ fn get_game_i(game_number:Int) -> String:
 
 
 def main():
-    check_game_11982()
-   
-    var i = 11982 
-        
-    board = FreeCellBoard(get_game_i(i)) 
-    var hashtable = Dict[String,Bool]() 
-    solved= solve(board,hashtable) 
-
+    #check_game_11982()
+    unsolvable = List[Int]()
+    for i in range (1,32001):    
+        print(i, "unsolvable:", len(unsolvable))   
+        board = FreeCellBoard(get_game_i(i)) 
+        var hashtable = Dict[String,Bool]() 
+        solved= solve(board,hashtable) 
+        if solved[0]==False and solved[1]==False:
+            unsolvable.append(i)
+    for i in range (len(unsolvable)):
+        print("Game", unsolvable[i], " is unsolvable")
     
     
 
